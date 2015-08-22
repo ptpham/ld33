@@ -2,9 +2,52 @@
 
 <html>
 <head>
-
+  <script src="gl-matrix.js"></script>
+  <script src="twgl-full.js"></script>
 </head>
 <body>
+  <script id="vs" type="text/vshader">
+    attribute vec4 position;
+    uniform mat4 project, model;
+    void main() {
+      gl_Position = project*model*position;
+    }
+  </script>
+  <script id="fs" type="text/fshader">
+    precision mediump float;
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy;
+      gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+  </script>
+  <canvas id="canvas"> </canvas>
+
+<script>
+  var gl = canvas.getContext('webgl'); 
+  
+  var programInfo = twgl.createProgramInfo(gl, ["vs", "fs"]);
+  var bufferInfo = twgl.primitives.createCylinderBufferInfo(gl, 0.2, 1.0, 10, 5);
+ 
+  function render(time) {
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    var width = gl.canvas.width, height = gl.canvas.height;
+    var project = mat4.perspective(mat4.create(), Math.PI/6, width/height, 1.0, 5);
+    var world = mat4.lookAt(mat4.create(), vec3.fromValues(1, 1, 1),
+      vec3.fromValues(0, 0, 0), vec3.fromValues(0, 1, 0));
+    var uniforms = { project: project, world: world };
+ 
+    gl.useProgram(programInfo.program);
+    twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+    twgl.setUniforms(programInfo, uniforms);
+    twgl.drawBufferInfo(gl, gl.TRIANGLES, bufferInfo);
+ 
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+</script>
 
 </body>
 </html>
