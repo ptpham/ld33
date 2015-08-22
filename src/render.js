@@ -78,7 +78,7 @@ function nudgeWormSpine(amount) {
 function applyWormSpine() {
   _.times(numWormVertices, function(i) {
     var numSegments = wormSpine.length;
-    var scaled = Math.min((i + wormShift)/verticesPerSegment, wormLength + wormShift/verticesPerSegment);
+    var scaled = Math.min((i + wormShift)/verticesPerSegment, wormLength/segmentLength + wormShift/verticesPerSegment);
     var index = Math.floor(scaled);
     var alpha = Math.min(scaled - index, 1);
 
