@@ -4,17 +4,38 @@
     <meta charset="utf8">
     <title>ld33</title>
     <style>
+      * { box-sizing: border-box; }
       html, body {
         margin: 0px;
+        width: 100%;
       }
       canvas {
         width: 100%;
         height: 100%;
       }
+      body { position: relative } 
+      overhead-bar {
+        display: flex; position: absolute; padding: 20px; top: 0px;
+        width: 100%; height: 80px;
+      }
+      health-bar {
+        position: absolute; border-radius: 10px; overflow: hidden;
+        border: 2px solid white; height: 20px; width: calc(100% - 40px);
+      }
+      health-filled {
+        display: block;
+        height: 100%; width: 100%; opacity: 0.3;
+        background: green;
+      }
     </style>
   </head>
   <body>
     <canvas id="c"></canvas>
+    <overhead-bar>
+      <health-bar>
+        <health-filled id="healthIndicator"></health-filled>
+      </health-bar>
+    </overhead-bar>
   </body>
   <script id="quad-vs" type="notjs">
     uniform mat4 u_worldViewProjection;
