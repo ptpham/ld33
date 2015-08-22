@@ -225,7 +225,7 @@ for (var ii = 0; ii < numObjects; ++ii) {
   objects.push(object);
 }
 
-function doWormDamage() {
+function doWormDamage(time) {
   var lastSpine = _.last(wormSpine);
   var wormSelfIntersect = detectSelfIntersection();
   var damageMin = 0.0000001;
@@ -276,7 +276,7 @@ function render(time) {
     if (keysDown[87]) nudgeWormSpine(0.1);
     else if (keysDown[83])  nudgeWormSpine(-0.1);
     applyWormSpine();
-    doWormDamage();
+    doWormDamage(time);
 
     var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
     gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
