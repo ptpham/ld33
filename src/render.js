@@ -33,31 +33,43 @@ var tower = {
 
 var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, 24, 100);
 
-// wormSpine entries are radius, height, and theta
-var wormSpine = [[5, 0, 0], [5, 0, Math.PI/2], [5, 0, Math.PI], [5, 0, 3/2*Math.PI]];
+// wormSpine entries are radius, height, and tilt
+var wormSpine = [[5, 0, 0], [5, 0, 0]];
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
-var wormShift = 0;
+var segmentLength = Math.PI/4, verticesPerSegment = 480, wormExtension = 0;
+var wormShift = 0, wormOffset = Math.PI, wormLength = segmentLength*(wormSpine.length - 1);
 
 function advanceWormSpine(delta) {
-  if (wormSpine.length > 1) {
-    wormShift += delta;
-    var threshold = numWormVertices/(wormSpine.length - 2);
-    while (wormShift >= threshold) {
-      wormSpine.splice(0, 1);
-      var newSegment = _.cloneDeep(_.last(wormSpine));
-      newSegment[2] += Math.PI/2;
-      wormSpine.push(newSegment);
-      wormShift -= threshold;
-    }
+  var lengthDelta = delta/verticesPerSegment;
+  wormOffset += lengthDelta;
+  wormShift += delta;
+  if (wormExtension > 0) {
+    var diff = Math.min(lengthDelta, wormExtension);
+    wormExtension -= diff;
+    wormLength += diff;
+    wormOffset -= diff;
   }
+  var threshold = verticesPerSegment;
+  while (wormShift >= threshold) {
+    wormSpine.splice(0, 1);
+    var newSegment = _.cloneDeep(_.last(wormSpine));
+    wormSpine.push(newSegment);
+    wormShift -= threshold;
+  }
+}
+
+function addWormSegment() {
+  var newSegment = _.cloneDeep(_.last(wormSpine));
+  wormExtension += segmentLength;
+  wormSpine.push(newSegment);
 }
 
 function nudgeWormSpine(amount) {
   var target = _.last(wormSpine);
   var previous = wormSpine[wormSpine.length - 2];
-  var maxTRange = numWormVertices/(wormSpine.length - 1);
+  var maxTRange = verticesPerSegment;
   var tDiff = wormShift/maxTRange;
   var allowance = Math.sqrt(10 - tDiff*tDiff);
   if (Math.abs(target[1] - previous[1]) < allowance) target[1] += amount;
@@ -65,17 +77,17 @@ function nudgeWormSpine(amount) {
 
 function applyWormSpine() {
   _.times(numWormVertices, function(i) {
-    var numSpines = wormSpine.length;
-    var scaled = (numSpines - 2)*(i + wormShift)/(numWormVertices - 1);
+    var numSegments = wormSpine.length;
+    var scaled = (i + wormShift)/verticesPerSegment;
     var index = Math.floor(scaled);
     var alpha = scaled - index;
 
-    var lower = wormSpine[Math.min(index, numSpines - 1)];
-    var upper = wormSpine[Math.min(index + 1, numSpines - 1)];
+    var lower = wormSpine[Math.min(index, numSegments - 1)];
+    var upper = wormSpine[Math.min(index + 1, numSegments - 1)];
 
     wormVertices.spine[3*i] = alpha*upper[0] + (1.0 - alpha)*lower[0];
     wormVertices.spine[3*i + 1] = alpha*upper[1] + (1.0 - alpha)*lower[1];
-    wormVertices.spine[3*i + 2] = alpha*upper[2] + (1.0 - alpha)*lower[2];
+    wormVertices.spine[3*i + 2] = Math.min(segmentLength*i/verticesPerSegment, wormLength) + wormOffset;
   });
 }
 
