@@ -12,8 +12,46 @@ var tower = {
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
   rotationSpeed: 1
 };
+
+var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, 24, 100);
+
+// wormSpine entries are radius, height, and tilt
+var wormSpine = [[5, 0, 0], [3, 1, 0], [6, 2, 0], [10, 0, 0]];
+
+var numWormVertices = wormVertices.position.length/3;
+wormVertices.spine = new Float32Array(3*numWormVertices);
+var wormShift = 0;
+
+function advanceWormSpine(delta) {
+  if (wormSpine.length > 1) {
+    wormShift += delta;
+    var threshold = numWormVertices/wormSpine.length;
+    if (wormShift >= threshold) {
+      wormSpine.splice(0, 1);
+      wormSpine.push(_.clone(_.last(wormSpine)));
+      wormShift -= threshold;
+    }
+  }
+}
+
+function applyWormSpine() {
+  _.times(numWormVertices, function(i) {
+    var numSpines = wormSpine.length;
+    var scaled = (numSpines - 1)*(i/(numWormVertices - 1) + wormShift);
+    var index = Math.floor(scaled);
+    var alpha = scaled - index;
+
+    var lower = wormSpine[Math.min(index, numSpines - 1)];
+    var upper = wormSpine[Math.min(index + 1, numSpines - 1)];
+
+    wormVertices.spine[3*i] = alpha*upper[0] + (1.0 - alpha)*lower[0];
+  });
+}
+
+applyWormSpine(0);
+
 var worm = {
-  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, wormWidth, wormHeight, 24, 100),
+  bufferInfo: twgl.createBufferInfoFromArrays(gl, wormVertices),
   programInfo: twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]),
 };
 
@@ -71,7 +109,12 @@ for (var ii = 0; ii < numObjects; ++ii) {
   });
 }
 
+var lastTime = null;
 function render(time) {
+  if (lastTime == null) lastTime = time;
+  var delta = time - lastTime;
+  lastTime = time;
+
   time *= 0.001;
   twgl.resizeCanvasToDisplaySize(gl.canvas);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -88,6 +131,12 @@ function render(time) {
   m4.inverse(camera, view);
   m4.multiply(view, projection, viewProjection);
 
+  advanceWormSpine(delta/1000);
+  applyWormSpine();
+  var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
+  gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, wormVertices.spine, gl.STATIC_DRAW);
+  
   objects.forEach(function(obj) {
     var uni = obj.uniforms;
     var world = uni.u_world;
