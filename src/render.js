@@ -55,12 +55,12 @@ function findValidRadius(hdiff, curRadius) {
   if (curRadius - rdiff >= wormRadiusMin) return curRadius - rdiff;
 }
 
-function detectSelfIntersection() {
+function detectSelfIntersection(radiusQuery) {
   var lookAheadRadians = segmentLength;
   var lookAhead = verticesPerSegment*lookAheadRadians;
   var i = Math.floor(verticesPerSegment*wormLength/segmentLength);
   var height = wormVertices.spine[3*i + 1];
-  var curRadius = wormVertices.spine[3*i];
+  var radiusQuery = radiusQuery || wormVertices.spine[3*i];
   var radians = wormLength;
   var pi2 = 2*Math.PI; 
 
@@ -69,8 +69,8 @@ function detectSelfIntersection() {
     var j = Math.floor(verticesPerSegment*radians/segmentLength);
     for (var a = 0; a < lookAhead; a++) {
       var hdiff = height - wormVertices.spine[3*(j+a) + 1];
-      var rdiff = curRadius -  wormVertices.spine[3*(j+a)];
-      if (hdiff*hdiff + rdiff*rdiff <= wormWidth*wormWidth) return [j + a, hdiff, curRadius];
+      var rdiff = radiusQuery -  wormVertices.spine[3*(j+a)];
+      if (hdiff*hdiff + rdiff*rdiff <= wormWidth*wormWidth) return [j + a, hdiff, wormVertices.spine[3*i]];
     }
   }
 }
@@ -219,11 +219,13 @@ function render(time) {
   else if (keysDown[83])  nudgeWormSpine(-0.1);
   applyWormSpine();
   
+  var lastSpine = _.last(wormSpine);
   var wormSelfIntersect = detectSelfIntersection();
   if (wormSelfIntersect) {
     var correction = findValidRadius(wormSelfIntersect[1], wormSelfIntersect[2]);
-    var target = _.last(wormSpine);
-    if (correction) target[0] += (correction - target[0]);
+    if (correction) lastSpine[0] += (correction - lastSpine[0]);
+  } else if (lastSpine[0] > wormRadiusMin && detectSelfIntersection(wormRadiusMin) == null) {
+    lastSpine[0] += 0.1*(wormRadiusMin - lastSpine[0]); 
   }
 
   var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
