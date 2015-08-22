@@ -2,9 +2,11 @@ twgl.setAttributePrefix("a_");
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 var programInfo = twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]);
+var programInfoWorm = twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]);
 
 var shapes = [
-  twgl.primitives.createCylinderBufferInfo(gl, 2, gl.canvas.clientHeight, 24, 2),
+  twgl.primitives.createCylinderBufferInfo(gl, 3, gl.canvas.clientHeight, 24, 2),
+  twgl.primitives.createCylinderBufferInfo(gl, 1, 10, 24, 100),
 ];
 
 function rand(min, max) {
@@ -48,7 +50,7 @@ for (var ii = 0; ii < numObjects; ++ii) {
     u_worldViewProjection: m4.identity(),
   };
   drawObjects.push({
-    programInfo: programInfo,
+    programInfo: ii == 1 ? programInfoWorm : programInfo,
     bufferInfo: shapes[ii % shapes.length],
     uniforms: uniforms,
   });

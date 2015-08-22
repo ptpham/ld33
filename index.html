@@ -42,6 +42,44 @@
       gl_Position = v_position;
     }
   </script>
+  <script id="worm-vs" type="notjs">
+    uniform mat4 u_worldViewProjection;
+    uniform vec3 u_lightWorldPos;
+    uniform mat4 u_world;
+    uniform mat4 u_viewInverse;
+    uniform mat4 u_worldInverseTranspose;
+    
+    attribute vec4 a_position;
+    attribute vec3 a_normal;
+    attribute vec2 a_texcoord;
+    
+    varying vec4 v_position;
+    varying vec2 v_texCoord;
+    varying vec3 v_normal;
+    varying vec3 v_surfaceToLight;
+    varying vec3 v_surfaceToView;
+    
+    void main() {
+      float theta = a_position[1];
+      float radius = 4.0;
+      vec4 pos = a_position;
+      pos[1] = a_position[0];
+      pos[0] = 0.0;
+      float ctr = cos(theta + 1.5708);
+      float str = sin(theta + 1.5708);
+      float ct = cos(theta);
+      float st = sin(theta);
+      mat4 rot = mat4(vec4(ctr, 0, str, 0), vec4(0, 1, 0, 0), vec4(-str, 0, ctr, 0), vec4(0, 0, 0, 1));
+      mat4 push_out = mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(radius*ct, theta/2.0, radius*st, 1));
+      pos = push_out*rot*pos;
+      v_texCoord = a_texcoord;
+      v_position = (u_worldViewProjection * pos);
+      v_normal = (u_worldInverseTranspose * vec4(a_normal, 0)).xyz;
+      v_surfaceToLight = u_lightWorldPos - (u_world * pos).xyz;
+      v_surfaceToView = (u_viewInverse[3] - (u_world * pos)).xyz;
+      gl_Position = v_position;
+    }
+  </script>
   <script id="tower-fs" type="notjs">
     precision mediump float;
 
