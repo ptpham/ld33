@@ -48,6 +48,7 @@
     uniform mat4 u_world;
     uniform mat4 u_viewInverse;
     uniform mat4 u_worldInverseTranspose;
+    uniform vec2 u_mousePos;
     
     attribute vec4 a_position;
     attribute vec3 a_normal;
@@ -69,8 +70,9 @@
       float str = sin(theta + 1.5708);
       float ct = cos(theta);
       float st = sin(theta);
+      float alpha = (theta + 5.0)/10.0;
       mat4 rot = mat4(vec4(ctr, 0, str, 0), vec4(0, 1, 0, 0), vec4(-str, 0, ctr, 0), vec4(0, 0, 0, 1));
-      mat4 push_out = mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(radius*ct, theta/2.0, radius*st, 1));
+      mat4 push_out = mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(radius*ct, -alpha*u_mousePos[1]/500.0 + theta/2.0, radius*st, 1));
       pos = push_out*rot*pos;
       v_texCoord = a_texcoord;
       v_position = (u_worldViewProjection * pos);
@@ -118,9 +120,17 @@
       gl_FragColor = outColor;
     }
   </script>
+  <script>
+    var lastMouse = [0, 0];
+    document.addEventListener('mousemove', function(e) {
+      lastMouse = [e.clientX, e.clientY];
+    });
+  </script>
   <script src="twgl-full.js"></script>
   <script src="chroma.min.js"></script>
   <script src="src/render.js"></script>
+
+
 </html>
 
 

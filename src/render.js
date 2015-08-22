@@ -56,7 +56,7 @@ for (var ii = 0; ii < numObjects; ++ii) {
   });
   objects.push({
     translation: [0, 0, 0],
-    ySpeed: 1,
+    ySpeed: ii == 1 ? 0 : 1,
     uniforms: uniforms,
   });
 }
@@ -81,6 +81,7 @@ function render(time) {
   objects.forEach(function(obj) {
     var uni = obj.uniforms;
     var world = uni.u_world;
+    uni.u_mousePos = lastMouse;
     m4.identity(world);
     m4.rotateY(world, time * obj.ySpeed, world);
     m4.translate(world, obj.translation, world);
