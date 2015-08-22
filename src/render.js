@@ -27,7 +27,7 @@ var tower = {
 var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, 24, 100);
 
 // wormSpine entries are radius, height, and tilt
-var wormSpine = [[5, 0, 0], [7, 0, 0], [5, 0, 0], [10, 0, 0]];
+var wormSpine = [[5, -5, 0], [5, -5, 0], [5, -5, 0], [5, -5, 0]];
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
@@ -36,19 +36,24 @@ var wormShift = 0;
 function advanceWormSpine(delta) {
   if (wormSpine.length > 1) {
     wormShift += delta;
-    var threshold = numWormVertices/wormSpine.length;
+    var threshold = numWormVertices/(wormSpine.length - 1);
     if (wormShift >= threshold) {
       wormSpine.splice(0, 1);
-      wormSpine.push(_.clone(_.last(wormSpine)));
+      wormSpine.push(_.cloneDeep(_.last(wormSpine)));
       wormShift -= threshold;
     }
   }
 }
 
+function nudgeWormSpine(amount) {
+  var target = _.last(wormSpine);
+  target[1] += amount; 
+}
+
 function applyWormSpine() {
   _.times(numWormVertices, function(i) {
     var numSpines = wormSpine.length;
-    var scaled = (numSpines - 1)*(i/(numWormVertices - 1) + wormShift);
+    var scaled = (numSpines - 1)*(i + wormShift)/(numWormVertices - 1);
     var index = Math.floor(scaled);
     var alpha = scaled - index;
 
@@ -56,6 +61,7 @@ function applyWormSpine() {
     var upper = wormSpine[Math.min(index + 1, numSpines - 1)];
 
     wormVertices.spine[3*i] = alpha*upper[0] + (1.0 - alpha)*lower[0];
+    wormVertices.spine[3*i + 1] = alpha*upper[1] + (1.0 - alpha)*lower[1];
   });
 }
 
@@ -146,7 +152,8 @@ function render(time) {
   m4.inverse(camera, view);
   m4.multiply(view, projection, viewProjection);
 
-  advanceWormSpine(delta/1000);
+  advanceWormSpine(delta/2);
+  nudgeWormSpine(0.1);
   applyWormSpine();
   var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
   gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
