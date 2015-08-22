@@ -47,7 +47,14 @@ var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
 var segmentLength = Math.PI/4, verticesPerSegment = 240, wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
-var wormHealth = 100;
+var wormHealth = 100, wormDamaged = 0;
+var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
+
+function damageWorm(amount) {
+  wormHealth -= amount;
+  healthIndicator.style.width = wormHealth + '%';
+  wormDamaged += amount;
+}
 
 function findValidRadius(hdiff, curRadius) {
   var hypotenuse = 2*wormWidth;
@@ -168,6 +175,7 @@ for (var ii = 0; ii < numObjects; ++ii) {
     u_lightColor: lightColor,
     u_diffuseMult: chroma.hsv((baseHue + rand(0, 60)) % 360, 0.4, 0.8).gl(),
     u_specular: [1, 1, 1, 1],
+    u_emissive: [0, 0, 0, 0],
     u_shininess: 50,
     u_specularFactor: 1,
     u_diffuse: tex,
@@ -181,14 +189,18 @@ for (var ii = 0; ii < numObjects; ++ii) {
     bufferInfo: objectsToRender[ii].bufferInfo,
     uniforms: uniforms,
   });
-  objects.push({
+
+  var object = {
     rotation: objectsToRender[ii].rotation || 0,
     scale: objectsToRender[ii].scale || [1,1,1],
     timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
     translation: objectsToRender[ii].translation || [0, 0, 0],
     ySpeed: objectsToRender[ii].rotationSpeed || 0,
     uniforms: uniforms,
-  });
+  }
+  objectsToRender[ii].renderTarget = object;
+  objects.push(object);
+  
 }
 
 var lastTime = null;
@@ -222,16 +234,22 @@ function render(time) {
   
   var lastSpine = _.last(wormSpine);
   var wormSelfIntersect = detectSelfIntersection();
+  var damageMin = 0.0000001;
   if (wormSelfIntersect) {
     var correction = findValidRadius(wormSelfIntersect[1], wormSelfIntersect[2]);
     if (correction) lastSpine[0] += (correction - lastSpine[0]);
     if (wormSelfIntersect[0] == 0) {
-      wormHealth--;
-      healthIndicator.style.width = wormHealth + '%';
+      damageWorm(1);
+      var uniforms = worm.renderTarget.uniforms;
+      if (wormDamaged > damageMin) {
+        uniforms.u_emissive = damageColors[Math.floor(10*time) % damageColors.length];
+      }
     }
   } else if (lastSpine[0] > wormRadiusMin && detectSelfIntersection(wormRadiusMin) == null) {
     lastSpine[0] += 0.1*(wormRadiusMin - lastSpine[0]); 
   }
+  if (wormDamaged < damageMin) worm.renderTarget.uniforms.u_emissive = [0, 0, 0, 0];
+  wormDamaged /= 2;
 
   var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
   gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);

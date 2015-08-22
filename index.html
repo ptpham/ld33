@@ -148,6 +148,7 @@
     uniform vec4 u_diffuseMult;
     uniform sampler2D u_diffuse;
     uniform vec4 u_specular;
+    uniform vec4 u_emissive;
     uniform float u_shininess;
     uniform float u_specularFactor;
 
@@ -170,7 +171,7 @@
       u_lightColor * (diffuseColor * litR.y +
                     u_specular * litR.z * u_specularFactor)).rgb,
           diffuseColor.a);
-      gl_FragColor = outColor;
+      gl_FragColor = outColor + u_emissive;
     }
   </script>
   <script>
