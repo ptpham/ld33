@@ -8,6 +8,13 @@ var towerHeight = gl.canvas.clientHeight;
 var wormWidth = 1;
 var wormHeight = 10;
 
+var food  = {
+  bufferInfo: twgl.primitives.createPlaneBufferInfo(gl, 1, 1.5, 100, 100, m4.rotationX(Math.PI / 2)),
+  programInfo: twgl.createProgramInfo(gl, ["quad-vs", "tower-fs"]),
+  rotationSpeed: 1,
+  timeTranslation: [0, 0.001, 0]
+};
+
 // singular for now, this should be plural
 var obstacle = {
   bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
@@ -28,7 +35,7 @@ var worm = {
   programInfo: twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]),
 };
 
-var objectsToRender = [ obstacle, tower ];
+var objectsToRender = [ food, obstacle, tower ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -76,6 +83,7 @@ for (var ii = 0; ii < numObjects; ++ii) {
     uniforms: uniforms,
   });
   objects.push({
+    rotation: objectsToRender[ii].rotation || 0,
     scale: objectsToRender[ii].scale || [1,1,1],
     timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
     translation: objectsToRender[ii].translation || [0, 0, 0],
