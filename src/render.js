@@ -41,11 +41,39 @@ var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight,
 
 // wormSpine entries are radius, height, and tilt
 var wormSpine = [[5, 0, 0], [5, 0, 0], [5,0,0]];
+var wormRadiusMin = 5, wormRadiusMax = 7;
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
-var segmentLength = Math.PI/4, verticesPerSegment = 480, wormExtension = 0;
+var segmentLength = Math.PI/4, verticesPerSegment = 240, wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
+
+function findValidRadius(hdiff, curRadius) {
+  var hypotenuse = 2*wormWidth;
+  var rdiff = Math.sqrt(hypotenuse*hypotenuse - hdiff*hdiff);
+  if (curRadius + rdiff <= wormRadiusMax) return curRadius + rdiff;
+  if (curRadius - rdiff >= wormRadiusMin) return curRadius - rdiff;
+}
+
+function detectSelfIntersection() {
+  var lookAheadRadians = segmentLength;
+  var lookAhead = verticesPerSegment*lookAheadRadians;
+  var i = Math.floor(verticesPerSegment*wormLength/segmentLength);
+  var height = wormVertices.spine[3*i + 1];
+  var curRadius = wormVertices.spine[3*i];
+  var radians = wormLength;
+  var pi2 = 2*Math.PI; 
+
+  while (radians - pi2 + lookAheadRadians >= 0) {
+    radians -= pi2;
+    var j = Math.floor(verticesPerSegment*radians/segmentLength);
+    for (var a = 0; a < lookAhead; a++) {
+      var hdiff = height - wormVertices.spine[3*(j+a) + 1];
+      var rdiff = curRadius -  wormVertices.spine[3*(j+a)];
+      if (hdiff*hdiff + rdiff*rdiff <= wormWidth*wormWidth) return [j + a, hdiff, curRadius];
+    }
+  }
+}
 
 function advanceWormSpine(delta) {
   var lengthDelta = delta/verticesPerSegment;
@@ -70,6 +98,8 @@ function addWormSegment() {
   wormExtension += segmentLength;
   wormSpine.push(newSegment);
 }
+
+for (var i = 0; i < 8; i++) addWormSegment();
 
 function nudgeWormSpine(amount) {
   var target = _.last(wormSpine);
@@ -188,6 +218,14 @@ function render(time) {
   if (keysDown[87]) nudgeWormSpine(0.1);
   else if (keysDown[83])  nudgeWormSpine(-0.1);
   applyWormSpine();
+  
+  var wormSelfIntersect = detectSelfIntersection();
+  if (wormSelfIntersect) {
+    var correction = findValidRadius(wormSelfIntersect[1], wormSelfIntersect[2]);
+    var target = _.last(wormSpine);
+    if (correction) target[0] += (correction - target[0]);
+  }
+
   var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
   gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
   gl.bufferData(gl.ARRAY_BUFFER, wormVertices.spine, gl.STATIC_DRAW);
