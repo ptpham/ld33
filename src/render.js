@@ -2,10 +2,20 @@ twgl.setAttributePrefix("a_");
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 
+var obstacleSize = 2;
 var towerWidth = 3;
 var towerHeight = gl.canvas.clientHeight;
 var wormWidth = 1;
 var wormHeight = 10;
+
+// singular for now, this should be plural
+var obstacle = {
+  bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
+  programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+  rotationSpeed: 1,
+  scale: [1, 2, 1],
+  translation: [towerWidth, 0, 0]
+};
 
 var tower = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 24, 2),
@@ -17,7 +27,7 @@ var worm = {
   programInfo: twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]),
 };
 
-var objectsToRender = [ tower, worm ];
+var objectsToRender = [ obstacle, tower ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -65,7 +75,8 @@ for (var ii = 0; ii < numObjects; ++ii) {
     uniforms: uniforms,
   });
   objects.push({
-    translation: [0, 0, 0],
+    scale: objectsToRender[ii].scale || [1,1,1],
+    translation: objectsToRender[ii].translation || [0, 0, 0],
     ySpeed: objectsToRender[ii].rotationSpeed || 0,
     uniforms: uniforms,
   });
@@ -94,6 +105,7 @@ function render(time) {
     uni.u_mousePos = lastMouse;
     m4.identity(world);
     m4.rotateY(world, time * obj.ySpeed, world);
+    m4.scale(world, obj.scale, world);
     m4.translate(world, obj.translation, world);
     m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
     m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
