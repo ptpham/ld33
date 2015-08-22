@@ -39,11 +39,10 @@ var wormSpine = [[5, 0, 0], [5, 0, 0], [5,0,0]];
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
 var segmentLength = Math.PI/4, verticesPerSegment = 480, wormExtension = 0;
-var wormShift = 0, wormOffset = Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
+var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
 
 function advanceWormSpine(delta) {
   var lengthDelta = delta/verticesPerSegment;
-  wormOffset += lengthDelta;
   wormShift += delta;
   if (wormExtension > 0) {
     var diff = Math.min(lengthDelta, wormExtension);
