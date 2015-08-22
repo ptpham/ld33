@@ -1,13 +1,23 @@
 twgl.setAttributePrefix("a_");
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
-var programInfo = twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]);
-var programInfoWorm = twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]);
 
-var shapes = [
-  twgl.primitives.createCylinderBufferInfo(gl, 3, gl.canvas.clientHeight, 24, 2),
-  twgl.primitives.createCylinderBufferInfo(gl, 1, 10, 24, 100),
-];
+var towerWidth = 3;
+var towerHeight = gl.canvas.clientHeight;
+var wormWidth = 1;
+var wormHeight = 10;
+
+var tower = {
+  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 24, 2),
+  programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+  rotationSpeed: 1
+};
+var worm = {
+  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, wormWidth, wormHeight, 24, 100),
+  programInfo: twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]),
+};
+
+var objectsToRender = [ tower, worm ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -33,7 +43,7 @@ var tex = twgl.createTexture(gl, {
 
 var objects = [];
 var drawObjects = [];
-var numObjects = shapes.length;
+var numObjects = objectsToRender.length;
 var baseHue = rand(0, 360);
 for (var ii = 0; ii < numObjects; ++ii) {
   var uniforms = {
@@ -50,13 +60,13 @@ for (var ii = 0; ii < numObjects; ++ii) {
     u_worldViewProjection: m4.identity(),
   };
   drawObjects.push({
-    programInfo: ii == 1 ? programInfoWorm : programInfo,
-    bufferInfo: shapes[ii % shapes.length],
+    programInfo: objectsToRender[ii].programInfo,
+    bufferInfo: objectsToRender[ii].bufferInfo,
     uniforms: uniforms,
   });
   objects.push({
     translation: [0, 0, 0],
-    ySpeed: ii == 1 ? 0 : 1,
+    ySpeed: objectsToRender[ii].rotationSpeed || 0,
     uniforms: uniforms,
   });
 }
