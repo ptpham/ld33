@@ -31,7 +31,7 @@ var tex = twgl.createTexture(gl, {
 
 var objects = [];
 var drawObjects = [];
-var numObjects = 1;
+var numObjects = shapes.length;
 var baseHue = rand(0, 360);
 for (var ii = 0; ii < numObjects; ++ii) {
   var uniforms = {
