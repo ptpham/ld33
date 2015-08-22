@@ -1,12 +1,14 @@
 twgl.setAttributePrefix("a_");
+var v3 = twgl.v3;
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 
 var obstacleSize = 2;
-var towerWidth = 3;
+var towerWidth = 4;
 var towerHeight = gl.canvas.clientHeight;
 var wormWidth = 1;
 var wormHeight = 10;
+var lose = false;
 
 var skyCylinder = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, 20, 100, 24, 2),
@@ -25,10 +27,12 @@ var food  = {
 var obstacle = {
   bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+  radius: obstacleSize / 2,
   rotationSpeed: 1,
   scale: [1, 1, 1],
   timeTranslation: [0, 0.001, 0],
-  translation: [towerWidth, 0, 0]
+  translation: [towerWidth, 0, 0],
+  name: "obstacle"
 };
 
 var tower = {
@@ -107,8 +111,6 @@ function addWormSegment() {
   wormSpine.push(newSegment);
 }
 
-for (var i = 0; i < 8; i++) addWormSegment();
-
 function nudgeWormSpine(amount) {
   var target = _.last(wormSpine);
   var previous = wormSpine[wormSpine.length - 2];
@@ -136,9 +138,24 @@ function applyWormSpine() {
 
 applyWormSpine(0);
 
+function getWormHeadPosition() {
+  var index = 3*(numWormVertices-1);
+  return [0, wormVertices.spine[index+1], -wormVertices.spine[index]];
+}
+
 var worm = {
   bufferInfo: twgl.createBufferInfoFromArrays(gl, wormVertices),
   programInfo: twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]),
+  radius: wormWidth,
+  center: getWormHeadPosition(),
+  collide: function(other) {
+    if (other === this) { return; }
+    var epsilon = 0.01;
+    if (v3.length(v3.subtract(this.worldCenter, other.worldCenter)) < this.radius + other.radius + epsilon) {
+      lose = true;
+    }
+  },
+  name: "worm"
 };
 
 var objectsToRender = [ skyCylinder, food, obstacle, tower, worm ];
@@ -189,49 +206,26 @@ for (var ii = 0; ii < numObjects; ++ii) {
     bufferInfo: objectsToRender[ii].bufferInfo,
     uniforms: uniforms,
   });
-
-  var object = {
-    rotation: objectsToRender[ii].rotation || 0,
-    scale: objectsToRender[ii].scale || [1,1,1],
-    timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
-    translation: objectsToRender[ii].translation || [0, 0, 0],
-    ySpeed: objectsToRender[ii].rotationSpeed || 0,
-    uniforms: uniforms,
-  }
+  var object = (function() {
+      var thisObject = {
+        center: objectsToRender[ii].center || [0,0,0],
+        name: objectsToRender[ii].name || "",
+        radius: objectsToRender[ii].radius, // better have a radius!
+        rotation: objectsToRender[ii].rotation || 0,
+        scale: objectsToRender[ii].scale || [1,1,1],
+        timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
+        translation: objectsToRender[ii].translation || [0, 0, 0],
+        ySpeed: objectsToRender[ii].rotationSpeed || 0,
+        uniforms: uniforms,
+      };
+      if (objectsToRender[ii].collide) thisObject.collide = objectsToRender[ii].collide.bind(thisObject);
+      return thisObject;
+    })();
   objectsToRender[ii].renderTarget = object;
   objects.push(object);
-  
 }
 
-var lastTime = null;
-var dt = 0;
-function render(time) {
-  if (lastTime == null) lastTime = time;
-  var delta = time - lastTime;
-  lastTime = time;
-
-  time *= 0.001;
-  dt++;
-  twgl.resizeCanvasToDisplaySize(gl.canvas);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-  gl.enable(gl.DEPTH_TEST);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  var projection = m4.perspective(30 * Math.PI / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.5, 100);
-  var eye = [1, 4, -20];
-  var target = [0, 0, 0];
-  var up = [0, 1, 0];
-
-  m4.lookAt(eye, target, up, camera);
-  m4.inverse(camera, view);
-  m4.multiply(view, projection, viewProjection);
-
-  advanceWormSpine(delta/2);
-  if (keysDown[87]) nudgeWormSpine(0.1);
-  else if (keysDown[83])  nudgeWormSpine(-0.1);
-  applyWormSpine();
-  
+function doWormDamage() {
   var lastSpine = _.last(wormSpine);
   var wormSelfIntersect = detectSelfIntersection();
   var damageMin = 0.0000001;
@@ -251,23 +245,67 @@ function render(time) {
   if (wormDamaged < damageMin) worm.renderTarget.uniforms.u_emissive = [0, 0, 0, 0];
   wormDamaged /= 2;
 
-  var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
-  gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
-  gl.bufferData(gl.ARRAY_BUFFER, wormVertices.spine, gl.STATIC_DRAW);
-  
-  objects.forEach(function(obj) {
-    var uni = obj.uniforms;
-    var world = uni.u_world;
-    var timeTranslation = obj.timeTranslation.map(function(coord) { return coord * dt; });
-    uni.u_mousePos = lastMouse;
-    m4.identity(world);
-    m4.rotateY(world, time * obj.ySpeed, world);
-    m4.scale(world, obj.scale, world);
-    m4.translate(world, obj.translation, world);
-    m4.translate(world, timeTranslation, world);
-    m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
-    m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
-  });
+}
+
+var lastTime = null;
+var dt = 0;
+function render(time) {
+  if (!lose) {
+    if (lastTime == null) lastTime = time;
+    var delta = time - lastTime;
+    lastTime = time;
+
+    time *= 0.001;
+    dt++;
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    var projection = m4.perspective(30 * Math.PI / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.5, 100);
+    var eye = [1, 4, -20];
+    var target = [0, 0, 0];
+    var up = [0, 1, 0];
+
+    m4.lookAt(eye, target, up, camera);
+    m4.inverse(camera, view);
+    m4.multiply(view, projection, viewProjection);
+
+    advanceWormSpine(delta/2);
+    if (keysDown[87]) nudgeWormSpine(0.1);
+    else if (keysDown[83])  nudgeWormSpine(-0.1);
+    applyWormSpine();
+    doWormDamage();
+
+    var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
+    gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, wormVertices.spine, gl.STATIC_DRAW);
+
+    objects.forEach(function(obj) {
+      if (obj.name === "worm") {
+        obj.center = getWormHeadPosition();
+      }
+      var uni = obj.uniforms;
+      var world = uni.u_world;
+      var timeTranslation = obj.timeTranslation.map(function(coord) { return coord * dt; });
+      uni.u_mousePos = lastMouse;
+      m4.identity(world);
+      m4.rotateY(world, time * obj.ySpeed, world);
+      m4.scale(world, obj.scale, world);
+      m4.translate(world, obj.translation, world);
+      m4.translate(world, timeTranslation, world);
+      obj.worldCenter = m4.transformPoint(uni.u_world, obj.center);
+      m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
+      m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
+    });
+
+    objects.forEach(function(thisObject) {
+      if (thisObject.collide) {
+        objects.forEach(thisObject.collide);
+      }
+    });
+  }
 
   twgl.drawObjectList(gl, drawObjects);
 
