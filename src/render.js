@@ -13,7 +13,8 @@ var obstacle = {
   bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
   rotationSpeed: 1,
-  scale: [1, 2, 1],
+  scale: [1, 1, 1],
+  timeTranslation: [0, 0.001, 0],
   translation: [towerWidth, 0, 0]
 };
 
@@ -76,14 +77,18 @@ for (var ii = 0; ii < numObjects; ++ii) {
   });
   objects.push({
     scale: objectsToRender[ii].scale || [1,1,1],
+    timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
     translation: objectsToRender[ii].translation || [0, 0, 0],
     ySpeed: objectsToRender[ii].rotationSpeed || 0,
     uniforms: uniforms,
   });
 }
 
+var dt = 0;
+
 function render(time) {
   time *= 0.001;
+  dt++;
   twgl.resizeCanvasToDisplaySize(gl.canvas);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -102,11 +107,13 @@ function render(time) {
   objects.forEach(function(obj) {
     var uni = obj.uniforms;
     var world = uni.u_world;
+    var timeTranslation = obj.timeTranslation.map(function(coord) { return coord * dt; });
     uni.u_mousePos = lastMouse;
     m4.identity(world);
     m4.rotateY(world, time * obj.ySpeed, world);
     m4.scale(world, obj.scale, world);
     m4.translate(world, obj.translation, world);
+    m4.translate(world, timeTranslation, world);
     m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
     m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
   });
