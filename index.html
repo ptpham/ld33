@@ -127,6 +127,15 @@
     document.addEventListener('mousemove', function(e) {
       lastMouse = [e.clientX, e.clientY];
     });
+    
+    var keysDown = { };
+    document.addEventListener('keydown', function(e) {
+      keysDown[e.keyCode] = true;
+    });
+
+    document.addEventListener('keyup', function(e) {
+      delete keysDown[e.keyCode];
+    });
   </script>
   <script src="lodash.min.js"></script>
   <script src="twgl-full.js"></script>

@@ -36,8 +36,8 @@ var wormShift = 0;
 function advanceWormSpine(delta) {
   if (wormSpine.length > 1) {
     wormShift += delta;
-    var threshold = numWormVertices/(wormSpine.length - 1);
-    if (wormShift >= threshold) {
+    var threshold = numWormVertices/(wormSpine.length - 2);
+    while (wormShift >= threshold) {
       wormSpine.splice(0, 1);
       wormSpine.push(_.cloneDeep(_.last(wormSpine)));
       wormShift -= threshold;
@@ -47,13 +47,17 @@ function advanceWormSpine(delta) {
 
 function nudgeWormSpine(amount) {
   var target = _.last(wormSpine);
-  target[1] += amount; 
+  var previous = wormSpine[wormSpine.length - 2];
+  var maxTRange = numWormVertices/(wormSpine.length - 1);
+  var tDiff = wormShift/maxTRange;
+  var allowance = Math.sqrt(10 - tDiff*tDiff);
+  if (Math.abs(target[1] - previous[1]) < allowance) target[1] += amount;
 }
 
 function applyWormSpine() {
   _.times(numWormVertices, function(i) {
     var numSpines = wormSpine.length;
-    var scaled = (numSpines - 1)*(i + wormShift)/(numWormVertices - 1);
+    var scaled = (numSpines - 2)*(i + wormShift)/(numWormVertices - 1);
     var index = Math.floor(scaled);
     var alpha = scaled - index;
 
@@ -153,7 +157,8 @@ function render(time) {
   m4.multiply(view, projection, viewProjection);
 
   advanceWormSpine(delta/2);
-  nudgeWormSpine(0.1);
+  if (keysDown[87]) nudgeWormSpine(0.1);
+  else if (keysDown[83])  nudgeWormSpine(-0.1);
   applyWormSpine();
   var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
   gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
