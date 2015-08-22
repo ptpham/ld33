@@ -2,10 +2,21 @@ twgl.setAttributePrefix("a_");
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 
+var obstacleSize = 2;
 var towerWidth = 3;
 var towerHeight = gl.canvas.clientHeight;
 var wormWidth = 1;
 var wormHeight = 10;
+
+// singular for now, this should be plural
+var obstacle = {
+  bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
+  programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+  rotationSpeed: 1,
+  scale: [1, 1, 1],
+  timeTranslation: [0, 0.001, 0],
+  translation: [towerWidth, 0, 0]
+};
 
 var tower = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 24, 2),
@@ -16,7 +27,7 @@ var tower = {
 var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, 24, 100);
 
 // wormSpine entries are radius, height, and tilt
-var wormSpine = [[5, 0, 0], [3, 1, 0], [6, 2, 0], [10, 0, 0]];
+var wormSpine = [[5, 0, 0], [7, 0, 0], [5, 0, 0], [10, 0, 0]];
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
@@ -55,7 +66,7 @@ var worm = {
   programInfo: twgl.createProgramInfo(gl, ["worm-vs", "tower-fs"]),
 };
 
-var objectsToRender = [ tower, worm ];
+var objectsToRender = [ obstacle, tower, worm ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -103,19 +114,23 @@ for (var ii = 0; ii < numObjects; ++ii) {
     uniforms: uniforms,
   });
   objects.push({
-    translation: [0, 0, 0],
+    scale: objectsToRender[ii].scale || [1,1,1],
+    timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
+    translation: objectsToRender[ii].translation || [0, 0, 0],
     ySpeed: objectsToRender[ii].rotationSpeed || 0,
     uniforms: uniforms,
   });
 }
 
 var lastTime = null;
+var dt = 0;
 function render(time) {
   if (lastTime == null) lastTime = time;
   var delta = time - lastTime;
   lastTime = time;
 
   time *= 0.001;
+  dt++;
   twgl.resizeCanvasToDisplaySize(gl.canvas);
   gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -140,10 +155,13 @@ function render(time) {
   objects.forEach(function(obj) {
     var uni = obj.uniforms;
     var world = uni.u_world;
+    var timeTranslation = obj.timeTranslation.map(function(coord) { return coord * dt; });
     uni.u_mousePos = lastMouse;
     m4.identity(world);
     m4.rotateY(world, time * obj.ySpeed, world);
+    m4.scale(world, obj.scale, world);
     m4.translate(world, obj.translation, world);
+    m4.translate(world, timeTranslation, world);
     m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
     m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
   });
