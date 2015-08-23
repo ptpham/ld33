@@ -56,7 +56,7 @@
 
     void main() {
       vec4 pos = a_position;
-      float radius = 4.0;
+      float radius = 5.0;
       float actualZ = sqrt(radius * radius - a_position[0] * a_position[0]);
       mat4 push_out = mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, -actualZ, 1));
       pos = push_out * pos;

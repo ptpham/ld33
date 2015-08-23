@@ -3,10 +3,10 @@ var v3 = twgl.v3;
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 
-var obstacleSize = 2;
-var towerWidth = 4;
+var obstacleSize = 1;
+var towerWidth = 5;
 var towerHeight = 12;
-var wormWidth = 1;
+var wormWidth = 0.5;
 var wormHeight = 1;
 var lose = false;
 var score = 0;
