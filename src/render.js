@@ -74,9 +74,9 @@ var wormRadiusMin = 5, wormRadiusMax = 7;
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
-var segmentLength = Math.PI/4, verticesPerSegment = 240, wormExtension = 0;
+var segmentLength = Math.PI/4, verticesPerSegment = 132, wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
-var wormHealth = 100, wormDamaged = 0;
+var wormHealth = 100, wormDamaged = 0, maxSegments = numWormVertices/verticesPerSegment;
 var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
 
 function damageWorm(amount) {
@@ -134,9 +134,11 @@ function advanceWormSpine(delta) {
 }
 
 function addWormSegment() {
-  var newSegment = _.cloneDeep(_.last(wormSpine));
-  wormExtension += segmentLength;
-  wormSpine.push(newSegment);
+  if (wormSpine.length < maxSegments) {
+    var newSegment = _.cloneDeep(_.last(wormSpine));
+    wormExtension += segmentLength;
+    wormSpine.push(newSegment);
+  }
 }
 
 function nudgeWormSpine(amount) {
