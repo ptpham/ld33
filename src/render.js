@@ -270,7 +270,7 @@ function createObject(objectToRender) {
     u_specular: [1, 1, 1, 1],
     u_emissive: [0.15, 0.1, 0.2, 0],
     u_shininess: 50,
-    u_specularFactor: 1,
+    u_specularFactor: 0,
     u_diffuse: textures[objectToRender.name] || textures["default"],
     u_viewInverse: camera,
     u_world: m4.identity(),
