@@ -19,19 +19,28 @@ var skyCylinder = {
 };
 
 // one food for now
-var food  = createFood();
 var numFoodToCreate = 0;
+var numObstaclesToCreate = 0;
 var foodInterval = 10;
-var currentInterval = 0;
+var currentFoodInterval = 0;
+var difficulty = 1;
+var obstacleInterval = 1000 / difficulty;
+var currentObstacleInterval = 0;
+var globalInterval = 0;
 
 function createFood(timeCreated) {
+  if (globalInterval > 0) {
+    return false;
+  }
+  // singular for now, this should be plural
+  var rotation = rand(0,359)/180 * Math.PI;
   var food = {
     bufferInfo: twgl.primitives.createPlaneBufferInfo(gl, 1, 1, 100, 100, m4.rotationX(Math.PI / 2)),
     programInfo: twgl.createProgramInfo(gl, ["quad-vs", "tower-fs"]),
     center: [0, 0, -towerWidth],
     rotationSpeed: 1,
     radius: 0.5,
-    translation: [0, 5, 0],
+    translation: [0, towerHeight/2, 0],
     timeCreated: timeCreated,
     timeTranslation: [0, -0.005, 0],
     name: "princess"
@@ -43,24 +52,36 @@ function createFood(timeCreated) {
     drawObjects.splice(drawObjects.indexOf(this.drawObject), 1);
     numFoodToCreate++;
   }).bind(food);
+  createObject(food);
+  globalInterval += 100;
   return food;
 };
 
-// singular for now, this should be plural
-var obstacle = {
-  bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
-  programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
-  radius: obstacleSize / 2,
-  rotationSpeed: 1,
-  scale: [1, 1, 1],
-  timeTranslation: [0, -0.001, 0],
-  translation: [towerWidth, 0, 0],
-  name: "obstacle",
-  doCollide: function() {
-    damageWorm(1);
+function createObstacle(timeCreated, force) {
+  if (!force && globalInterval > 0) {
+    return false;
   }
-};
-
+  // singular for now, this should be plural
+  var rotation = rand(0,359)/180 * Math.PI;
+  var obstacle = {
+    bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
+    programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+    radius: obstacleSize / 2,
+    rotation: rotation,
+    rotationSpeed: 1,
+    scale: [1, 1, 1],
+    timeTranslation: [0, -0.005, 0],
+    timeCreated: timeCreated,
+    translation: [towerWidth, towerHeight/2, 0],
+    name: "obstacle",
+    doCollide: function() {
+      damageWorm(1);
+    }
+  };
+  createObject(obstacle);
+  globalInterval += 100;
+  return obstacle;
+}
 
 var tower = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 100, 100),
@@ -194,7 +215,7 @@ var worm = {
   name: "worm"
 };
 
-var objectsToRender = [ skyCylinder, tower, obstacle, food, worm ];
+var objectsToRender = [ skyCylinder, tower, worm ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -206,9 +227,6 @@ var lightColor = [1, 1, 1, 1];
 var camera = m4.identity();
 var view = m4.identity();
 var viewProjection = m4.identity();
-
-var tex = twgl.createTexture(gl, {
-});
 
 var textures = twgl.createTextures(gl, {
   obstacle: { src: "images/spikes.jpg" },
@@ -234,6 +252,8 @@ var baseHue = rand(0, 360);
 for (var ii = 0; ii < numObjects; ++ii) {
   createObject(objectsToRender[ii]);
 }
+createFood(0);
+createObstacle(0, true);
  
 function createObject(objectToRender) {
   var uniforms = {
@@ -260,6 +280,7 @@ function createObject(objectToRender) {
   // that we don't have to read off all the values here
   var object = (function() {
       var thisObject = {
+        rotation: objectToRender.rotation || 0,
         timeCreated: objectToRender.timeCreated || 0,
         doCollide: objectToRender.doCollide,
         center: objectToRender.center || [0,0,0],
@@ -305,9 +326,18 @@ function colorWormDamage(time) {
 var lastTime = null;
 var dt = 0;
 function render(time) {
-  while (numFoodToCreate > 0) {
-    food = createFood(dt);
-    createObject(food);
+  if (globalInterval > 0) {
+    globalInterval--;
+  }
+  if (currentObstacleInterval > obstacleInterval) {
+    currentObstacleInterval = 0;
+    numObstaclesToCreate++;
+  } else {
+    currentObstacleInterval++;
+  }
+  if (numObstaclesToCreate > 0 && createObstacle(dt)) {
+    numObstaclesToCreate--;
+  } else if (numFoodToCreate > 0 && createFood(dt)) {
     numFoodToCreate--;
   }
   if (!lose) {
@@ -361,6 +391,7 @@ function render(time) {
       }
       uni.u_mousePos = lastMouse;
       m4.identity(world);
+      m4.rotateY(world, obj.rotation, world);
       m4.rotateY(world, time * obj.ySpeed, world);
       m4.scale(world, obj.scale, world);
       m4.translate(world, obj.translation, world);
