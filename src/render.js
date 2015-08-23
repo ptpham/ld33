@@ -12,7 +12,7 @@ var lose = false;
 var score = 0;
 
 var skyCylinder = {
-  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, 20, 100, 24, 2),
+  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, 50, 70, 12, 1, false, false),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
   rotationSpeed: 1,
   name: "sky"
