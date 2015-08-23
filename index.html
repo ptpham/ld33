@@ -151,6 +151,7 @@
     uniform vec4 u_emissive;
     uniform float u_shininess;
     uniform float u_specularFactor;
+    uniform float u_time;
 
     vec4 lit(float l ,float h, float m) {
       return vec4(1.0,
@@ -160,7 +161,9 @@
     }
 
     void main() {
-      vec4 diffuseColor = texture2D(u_diffuse, v_texCoord) * u_diffuseMult;
+      vec2 new_texCoord = v_texCoord;
+      new_texCoord[1] = v_texCoord[1] - (u_time / 100.0);
+      vec4 diffuseColor = texture2D(u_diffuse, new_texCoord) * u_diffuseMult;
       vec3 a_normal = normalize(v_normal);
       vec3 surfaceToLight = normalize(v_surfaceToLight);
       vec3 surfaceToView = normalize(v_surfaceToView);

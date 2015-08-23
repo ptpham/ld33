@@ -5,7 +5,7 @@ var gl = twgl.getWebGLContext(document.getElementById("c"));
 
 var obstacleSize = 2;
 var towerWidth = 4;
-var towerHeight = gl.canvas.clientHeight;
+var towerHeight = 12;
 var wormWidth = 1;
 var wormHeight = 10;
 var lose = false;
@@ -62,9 +62,10 @@ var obstacle = {
 
 
 var tower = {
-  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 24, 2),
+  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 100, 100),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
-  rotationSpeed: 1
+  rotationSpeed: 1,
+  name: "tower"
 };
 
 var wormSegments = 24;
@@ -204,16 +205,22 @@ var view = m4.identity();
 var viewProjection = m4.identity();
 
 var tex = twgl.createTexture(gl, {
-  min: gl.NEAREST,
-  mag: gl.NEAREST,
-  src: [
-    255, 255, 255, 255,
-    192, 192, 192, 255,
-    192, 192, 192, 255,
-    255, 255, 255, 255,
-  ],
 });
 
+var textures = twgl.createTextures(gl, {
+  obstacle: { src: "images/spikes.jpg" },
+  tower: { src: "images/tower.jpg", mag: gl.NEAREST, min: gl.NEAREST },
+  default: {
+    min: gl.NEAREST,
+    mag: gl.NEAREST,
+    src: [
+      255, 255, 255, 255,
+      192, 192, 192, 255,
+      192, 192, 192, 255,
+      255, 255, 255, 255,
+    ],
+  }
+});
 
 var objects = [];
 var drawObjects = [];
@@ -222,7 +229,7 @@ var baseHue = rand(0, 360);
 for (var ii = 0; ii < numObjects; ++ii) {
   createObject(objectsToRender[ii]);
 }
-
+ 
 function createObject(objectToRender) {
   var uniforms = {
     u_lightWorldPos: lightWorldPosition,
@@ -232,7 +239,7 @@ function createObject(objectToRender) {
     u_emissive: [0, 0, 0, 0],
     u_shininess: 50,
     u_specularFactor: 1,
-    u_diffuse: tex,
+    u_diffuse: textures[objectToRender.name] || textures["default"],
     u_viewInverse: camera,
     u_world: m4.identity(),
     u_worldInverseTranspose: m4.identity(),
@@ -335,12 +342,16 @@ function render(time) {
       if (obj.name === "worm") {
         obj.center = getWormHeadPosition();
       }
+
       var uni = obj.uniforms;
       var world = uni.u_world;
       var timeTranslation = obj.timeTranslation.map(function(coord) { 
           var actualDt = dt - obj.timeCreated;
           return coord * actualDt;
       });
+      if (obj.name === "tower") {
+        uni.u_time = time;
+      }
       uni.u_mousePos = lastMouse;
       m4.identity(world);
       m4.rotateY(world, time * obj.ySpeed, world);
