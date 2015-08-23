@@ -14,7 +14,8 @@ var score = 0;
 var skyCylinder = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, 20, 100, 24, 2),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
-  rotationSpeed: 1
+  rotationSpeed: 1,
+  name: "sky"
 };
 
 // one food for now
@@ -212,6 +213,7 @@ var tex = twgl.createTexture(gl, {
 var textures = twgl.createTextures(gl, {
   obstacle: { src: "images/spikes.jpg" },
   tower: { src: "images/tower.jpg", mag: gl.NEAREST, min: gl.NEAREST },
+  sky: { src: "images/storm.jpg" },
   default: {
     min: gl.NEAREST,
     mag: gl.NEAREST,
