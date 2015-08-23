@@ -132,14 +132,16 @@
       if (candidate >= threshold) candidate = candidate2;
 
       if (candidate < threshold) scale = sin(1.5708*(candidate)/threshold);
+      vec4 normal = vec4(pos.xyz, 0.0);
       mat4 rot = mat4(vec4(ctr, 0, str, 0), vec4(0, scale, 0, 0), vec4(-scale*str, 0, scale*ctr, 0), vec4(0, 0, 0, 1));
       mat4 push_out = mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(radius*ct, height, radius*st, 1));
       pos = push_out*rot*pos;
+      normal = normalize(rot*normal);
 
       float coord = (theta - u_wormOffset) / 1.5708;
       v_texCoord = vec2(coord - floor(coord), a_texcoord[0]);
       v_position = (u_worldViewProjection * pos);
-      v_normal = (u_worldInverseTranspose * vec4(a_normal, 0)).xyz;
+      v_normal = (u_worldInverseTranspose * normal).xyz;
       v_surfaceToLight = u_lightWorldPos - (u_world * pos).xyz;
       v_surfaceToView = (u_viewInverse[3] - (u_world * pos)).xyz;
       gl_Position = v_position;
