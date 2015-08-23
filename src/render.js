@@ -3,6 +3,7 @@ var v3 = twgl.v3;
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 
+var gridSize = 72;
 var obstacleSize = 1;
 var towerWidth = 5;
 var towerHeight = 12;
@@ -31,26 +32,29 @@ var numFoodToCreate = 0;
 var numObstaclesToCreate = 0;
 var foodInterval = 10;
 var currentFoodInterval = 0;
-var difficulty = 1;
-var obstacleInterval = 1000 / difficulty;
+var obstacleInterval = 1000;
 var currentObstacleInterval = 0;
 var globalInterval = 0;
+var minHeight = -towerHeight/3;
+var maxHeight = towerHeight/3 + 1;
 
 function createFood(timeCreated) {
   if (globalInterval > 0) {
     return false;
   }
-  // singular for now, this should be plural
-  var rotation = rand(0,359)/180 * Math.PI;
+
+  var rotation = 2*Math.PI * Math.floor(rand(0,gridSize))/gridSize;
   var food = {
-    bufferInfo: twgl.primitives.createPlaneBufferInfo(gl, 1, 1, 100, 100, m4.rotationX(Math.PI / 2)),
-    programInfo: twgl.createProgramInfo(gl, ["quad-vs", "tower-fs"]),
-    center: [0, 0, -towerWidth],
+    bufferInfo: twgl.primitives.createSphereBufferInfo(gl, obstacleSize/2, 10, 10),
+    programInfo: twgl.createProgramInfo(gl, ["food-vs", "food-fs"]),
+    rotation: rotation,
     rotationSpeed: globalRotation,
     radius: 0.5,
-    translation: [0, towerHeight/2, 0],
+    translation: [towerWidth, towerHeight/2, 0],
     timeCreated: timeCreated,
     timeTranslation: [0, -0.005, 0],
+    u_diffuseMult: [ 1, 0.2, 0, 0.9 ],
+    u_emissive: [ 1, 0, 0, 1],
     name: "princess"
   };
   food.doCollide = (function() {
@@ -58,6 +62,8 @@ function createFood(timeCreated) {
     addWormSegment();
     objects.splice(objects.indexOf(this.renderTarget), 1);
     drawObjects.splice(drawObjects.indexOf(this.drawObject), 1);
+    obstacleInterval--;
+    obstacleInterval = Math.max(obstacleInterval, 100);
     numFoodToCreate++;
   }).bind(food);
   createObject(food);
@@ -69,8 +75,8 @@ function createObstacle(timeCreated, force) {
   if (!force && globalInterval > 0) {
     return false;
   }
-  // singular for now, this should be plural
-  var rotation = rand(0,359)/180 * Math.PI;
+
+  var rotation = 2*Math.PI * Math.floor(rand(0,gridSize)) / gridSize;
   var obstacle = {
     bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
     programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
@@ -91,8 +97,13 @@ function createObstacle(timeCreated, force) {
   return obstacle;
 }
 
+var towerVertices = twgl.primitives.createCylinderVertices(towerWidth, towerHeight, 100, 10);
+_.times(towerVertices.texcoord.length, function(i) {
+  towerVertices.texcoord[i] *= 4;
+});
+
 var tower = {
-  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 100, 100),
+  bufferInfo: twgl.createBufferInfoFromArrays(gl, towerVertices),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
   rotationSpeed: globalRotation,
   name: "tower"
@@ -181,6 +192,7 @@ function nudgeWormSpine(amount) {
   var tDiff = wormShift/maxTRange;
   var allowance = Math.sqrt(10 - tDiff*tDiff);
   if (Math.abs(target[1] - previous[1]) < allowance) target[1] += amount;
+  target[1] = Math.min(Math.max(target[1], minHeight), maxHeight);
 }
 
 function applyWormSpine() {
@@ -241,6 +253,7 @@ var textures = twgl.createTextures(gl, {
   tower: { src: "images/tower.jpg", mag: gl.NEAREST, min: gl.NEAREST },
   sky: { src: "images/storm.jpg" },
   worm: { src: "images/snake.jpg" },
+  princess: { src: "images/woman1.jpg" },
   default: {
     min: gl.NEAREST,
     mag: gl.NEAREST,
@@ -266,9 +279,9 @@ createObstacle(0, true);
 function createObject(objectToRender) {
   var uniforms = {
     u_lightColor: lightColor,
-    u_diffuseMult: [1, 1, 1, 1],
+    u_diffuseMult: objectToRender.u_diffuseMult || [1, 1, 1, 1],
     u_specular: [1, 1, 1, 1],
-    u_emissive: [0.15, 0.1, 0.2, 0],
+    u_emissive: objectToRender.u_emissive || [0.15, 0.1, 0.2, 0],
     u_shininess: 50,
     u_specularFactor: 0,
     u_diffuse: textures[objectToRender.name] || textures["default"],
@@ -359,6 +372,8 @@ function render(time) {
 
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     var projection = m4.perspective(30 * Math.PI / 180, gl.canvas.clientWidth / gl.canvas.clientHeight, 0.5, 100);
     var eye = [1, 4, -20];
