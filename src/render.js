@@ -9,6 +9,7 @@ var towerHeight = gl.canvas.clientHeight;
 var wormWidth = 1;
 var wormHeight = 10;
 var lose = false;
+var score = 0;
 
 var skyCylinder = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, 20, 100, 24, 2),
@@ -16,11 +17,32 @@ var skyCylinder = {
   rotationSpeed: 1
 };
 
-var food  = {
-  bufferInfo: twgl.primitives.createPlaneBufferInfo(gl, 1, 1.5, 100, 100, m4.rotationX(Math.PI / 2)),
-  programInfo: twgl.createProgramInfo(gl, ["quad-vs", "tower-fs"]),
-  rotationSpeed: 1,
-  timeTranslation: [0, 0.001, 0]
+// one food for now
+var food  = createFood();
+var numFoodToCreate = 0;
+var foodInterval = 10;
+var currentInterval = 0;
+
+function createFood(timeCreated) {
+  var food = {
+    bufferInfo: twgl.primitives.createPlaneBufferInfo(gl, 1, 1, 100, 100, m4.rotationX(Math.PI / 2)),
+    programInfo: twgl.createProgramInfo(gl, ["quad-vs", "tower-fs"]),
+    center: [0, 0, -towerWidth],
+    rotationSpeed: 1,
+    radius: 0.5,
+    translation: [0, 5, 0],
+    timeCreated: timeCreated,
+    timeTranslation: [0, -0.005, 0],
+    name: "princess"
+  };
+  food.doCollide = (function() {
+    score++;
+    addWormSegment();
+    objects.splice(objects.indexOf(this.renderTarget), 1);
+    drawObjects.splice(drawObjects.indexOf(this.drawObject), 1);
+    numFoodToCreate++;
+  }).bind(food);
+  return food;
 };
 
 // singular for now, this should be plural
@@ -32,7 +54,10 @@ var obstacle = {
   scale: [1, 1, 1],
   timeTranslation: [0, 0.001, 0],
   translation: [towerWidth, 0, 0],
-  name: "obstacle"
+  name: "obstacle",
+  doCollide: function() {
+    damageWorm(1);
+  }
 };
 
 var tower = {
@@ -58,6 +83,9 @@ function damageWorm(amount) {
   wormHealth -= amount;
   healthIndicator.style.width = wormHealth + '%';
   wormDamaged += amount;
+  if (wormHealth < 0) {
+    lose = true;
+  }
 }
 
 function findValidRadius(hdiff, curRadius) {
@@ -152,7 +180,7 @@ var worm = {
     if (other === this) { return; }
     var epsilon = 0.01;
     if (v3.length(v3.subtract(this.worldCenter, other.worldCenter)) < this.radius + other.radius + epsilon) {
-      lose = true;
+      other.doCollide();
     }
   },
   name: "worm"
@@ -182,11 +210,16 @@ var tex = twgl.createTexture(gl, {
   ],
 });
 
+
 var objects = [];
 var drawObjects = [];
 var numObjects = objectsToRender.length;
 var baseHue = rand(0, 360);
 for (var ii = 0; ii < numObjects; ++ii) {
+  createObject(objectsToRender[ii]);
+}
+
+function createObject(objectToRender) {
   var uniforms = {
     u_lightWorldPos: lightWorldPosition,
     u_lightColor: lightColor,
@@ -201,27 +234,33 @@ for (var ii = 0; ii < numObjects; ++ii) {
     u_worldInverseTranspose: m4.identity(),
     u_worldViewProjection: m4.identity(),
   };
-  drawObjects.push({
-    programInfo: objectsToRender[ii].programInfo,
-    bufferInfo: objectsToRender[ii].bufferInfo,
+  var drawObject = {
+    programInfo: objectToRender.programInfo,
+    bufferInfo: objectToRender.bufferInfo,
     uniforms: uniforms,
-  });
+  };
+  drawObjects.push(drawObject);
+  // consider adding a pointer back to objectToRender so
+  // that we don't have to read off all the values here
   var object = (function() {
       var thisObject = {
-        center: objectsToRender[ii].center || [0,0,0],
-        name: objectsToRender[ii].name || "",
-        radius: objectsToRender[ii].radius, // better have a radius!
-        rotation: objectsToRender[ii].rotation || 0,
-        scale: objectsToRender[ii].scale || [1,1,1],
-        timeTranslation: objectsToRender[ii].timeTranslation || [0, 0, 0],
-        translation: objectsToRender[ii].translation || [0, 0, 0],
-        ySpeed: objectsToRender[ii].rotationSpeed || 0,
+        timeCreated: objectToRender.timeCreated || 0,
+        doCollide: objectToRender.doCollide,
+        center: objectToRender.center || [0,0,0],
+        name: objectToRender.name || "",
+        radius: objectToRender.radius, // better have a radius!
+        rotation: objectToRender.rotation || 0,
+        scale: objectToRender.scale || [1,1,1],
+        timeTranslation: objectToRender.timeTranslation || [0, 0, 0],
+        translation: objectToRender.translation || [0, 0, 0],
+        ySpeed: objectToRender.rotationSpeed || 0,
         uniforms: uniforms,
       };
-      if (objectsToRender[ii].collide) thisObject.collide = objectsToRender[ii].collide.bind(thisObject);
+      if (objectToRender.collide) thisObject.collide = objectToRender.collide.bind(thisObject);
       return thisObject;
     })();
-  objectsToRender[ii].renderTarget = object;
+  objectToRender.renderTarget = object;
+  objectToRender.drawObject = drawObject;
   objects.push(object);
 }
 
@@ -250,6 +289,11 @@ function colorWormDamage(time) {
 var lastTime = null;
 var dt = 0;
 function render(time) {
+  while (numFoodToCreate > 0) {
+    food = createFood(dt);
+    createObject(food);
+    numFoodToCreate--;
+  }
   if (!lose) {
     if (lastTime == null) lastTime = time;
     var delta = time - lastTime;
@@ -289,7 +333,10 @@ function render(time) {
       }
       var uni = obj.uniforms;
       var world = uni.u_world;
-      var timeTranslation = obj.timeTranslation.map(function(coord) { return coord * dt; });
+      var timeTranslation = obj.timeTranslation.map(function(coord) { 
+          var actualDt = dt - obj.timeCreated;
+          return coord * actualDt;
+      });
       uni.u_mousePos = lastMouse;
       m4.identity(world);
       m4.rotateY(world, time * obj.ySpeed, world);
