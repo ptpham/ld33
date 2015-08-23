@@ -100,7 +100,8 @@
     uniform mat4 u_world;
     uniform mat4 u_viewInverse;
     uniform mat4 u_worldInverseTranspose;
-    uniform vec2 u_mousePos;
+    uniform float u_wormLength;
+    uniform float u_wormOffset;
 
     attribute vec4 a_position;
     attribute vec3 a_normal;
@@ -124,7 +125,14 @@
       float str = sin(theta + 1.5708);
       float ct = cos(theta);
       float st = sin(theta);
-      mat4 rot = mat4(vec4(ctr, 0, str, 0), vec4(0, 1, 0, 0), vec4(-str, 0, ctr, 0), vec4(0, 0, 0, 1));
+      float scale = 1.0;
+      float threshold = 0.2;
+      float candidate = theta - u_wormOffset;
+      float candidate2 = u_wormLength - theta;
+      if (candidate >= threshold) candidate = candidate2;
+
+      if (candidate < threshold) scale = sin(1.5708*(candidate)/threshold);
+      mat4 rot = mat4(vec4(ctr, 0, str, 0), vec4(0, scale, 0, 0), vec4(-scale*str, 0, scale*ctr, 0), vec4(0, 0, 0, 1));
       mat4 push_out = mat4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(radius*ct, height, radius*st, 1));
       pos = push_out*rot*pos;
       v_texCoord = a_texcoord;

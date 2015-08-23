@@ -67,8 +67,8 @@ var tower = {
   rotationSpeed: 1
 };
 
-var wormSegments = 24;
-var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormSegments, 100);
+var wormRadialSegments = 12;
+var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormRadialSegments, 200);
 
 // wormSpine entries are radius, height, and tilt
 var wormSpine = [[5, 0, 0], [5, 0, 0], [5,0,0]];
@@ -76,7 +76,7 @@ var wormRadiusMin = 5, wormRadiusMax = 7;
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
-var segmentLength = Math.PI/4, verticesPerSegment = 144, wormExtension = 0;
+var segmentLength = Math.PI/4, verticesPerSegment = 8*2*(wormRadialSegments + 1), wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
 var wormHealth = 100, wormDamaged = 0, maxSegments = numWormVertices/verticesPerSegment;
 var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
@@ -153,9 +153,11 @@ function nudgeWormSpine(amount) {
 }
 
 function applyWormSpine() {
+  var endVerts = 3*(wormRadialSegments);
   _.times(numWormVertices, function(i) {
+    var i_use = Math.min(Math.max(i, endVerts), numWormVertices - endVerts);
     var numSegments = wormSpine.length;
-    var scaled = Math.min((i + wormShift)/verticesPerSegment, wormLength/segmentLength + wormShift/verticesPerSegment);
+    var scaled = Math.min((i_use + wormShift)/verticesPerSegment, wormLength/segmentLength + wormShift/verticesPerSegment);
     var index = Math.floor(scaled);
     var alpha = Math.min(scaled - index, 1);
 
@@ -164,7 +166,7 @@ function applyWormSpine() {
 
     wormVertices.spine[3*i] = alpha*upper[0] + (1.0 - alpha)*lower[0];
     wormVertices.spine[3*i + 1] = alpha*upper[1] + (1.0 - alpha)*lower[1];
-    wormVertices.spine[3*i + 2] = Math.min(segmentLength*i/verticesPerSegment, wormLength) + wormOffset;
+    wormVertices.spine[3*i + 2] = Math.min(segmentLength*(i_use)/verticesPerSegment, wormLength) + wormOffset;
   });
 }
 
@@ -190,7 +192,7 @@ var worm = {
   name: "worm"
 };
 
-var objectsToRender = [ skyCylinder, food, obstacle, tower, worm ];
+var objectsToRender = [ skyCylinder, tower, obstacle, food, worm ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -271,10 +273,10 @@ function createObject(objectToRender) {
 function checkSelfIntersection() {
   var lastSpine = _.last(wormSpine);
   var wormSelfIntersect = detectSelfIntersection();
-  if (wormSelfIntersect && wormSelfIntersect[3] >= verticesPerSegment/2) {
+  if (wormSelfIntersect) {
     var correction = findValidRadius(wormSelfIntersect[1], wormSelfIntersect[2]);
     if (correction) lastSpine[0] += (correction - lastSpine[0]);
-    if (wormSelfIntersect[0] == 0) damageWorm(1);
+    if (wormSelfIntersect[0] == 0 && wormSelfIntersect[3] >= verticesPerSegment/2) damageWorm(1);
   } else if (lastSpine[0] > wormRadiusMin && detectSelfIntersection(wormRadiusMin) == null) {
     lastSpine[0] += 0.1*(wormRadiusMin - lastSpine[0]); 
   }
@@ -326,6 +328,8 @@ function render(time) {
     applyWormSpine();
     checkSelfIntersection();
     colorWormDamage(time);
+    worm.renderTarget.uniforms.u_wormLength = _.last(wormVertices.spine);
+    worm.renderTarget.uniforms.u_wormOffset = wormVertices.spine[2];
 
     var wormSpineBuffer = worm.bufferInfo.attribs.a_spine.buffer;
     gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
@@ -341,7 +345,6 @@ function render(time) {
           var actualDt = dt - obj.timeCreated;
           return coord * actualDt;
       });
-      uni.u_mousePos = lastMouse;
       m4.identity(world);
       m4.rotateY(world, time * obj.ySpeed, world);
       m4.scale(world, obj.scale, world);
