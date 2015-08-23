@@ -7,7 +7,7 @@ var obstacleSize = 2;
 var towerWidth = 4;
 var towerHeight = 12;
 var wormWidth = 1;
-var wormHeight = 10;
+var wormHeight = 1;
 var lose = false;
 var score = 0;
 
@@ -214,6 +214,7 @@ var textures = twgl.createTextures(gl, {
   obstacle: { src: "images/spikes.jpg" },
   tower: { src: "images/tower.jpg", mag: gl.NEAREST, min: gl.NEAREST },
   sky: { src: "images/storm.jpg" },
+  worm: { src: "images/snake.jpg" },
   default: {
     min: gl.NEAREST,
     mag: gl.NEAREST,
