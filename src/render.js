@@ -60,13 +60,15 @@ var obstacle = {
   }
 };
 
+
 var tower = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 24, 2),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
   rotationSpeed: 1
 };
 
-var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, 24, 100);
+var wormSegments = 24;
+var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormSegments, 100);
 
 // wormSpine entries are radius, height, and tilt
 var wormSpine = [[5, 0, 0], [5, 0, 0], [5,0,0]];
@@ -74,7 +76,7 @@ var wormRadiusMin = 5, wormRadiusMax = 7;
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
-var segmentLength = Math.PI/4, verticesPerSegment = 132, wormExtension = 0;
+var segmentLength = Math.PI/4, verticesPerSegment = 144, wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
 var wormHealth = 100, wormDamaged = 0, maxSegments = numWormVertices/verticesPerSegment;
 var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
@@ -269,7 +271,7 @@ function createObject(objectToRender) {
 function checkSelfIntersection() {
   var lastSpine = _.last(wormSpine);
   var wormSelfIntersect = detectSelfIntersection();
-  if (wormSelfIntersect && wormSelfIntersect[3] >= verticesPerSegment) {
+  if (wormSelfIntersect && wormSelfIntersect[3] >= verticesPerSegment/2) {
     var correction = findValidRadius(wormSelfIntersect[1], wormSelfIntersect[2]);
     if (correction) lastSpine[0] += (correction - lastSpine[0]);
     if (wormSelfIntersect[0] == 0) damageWorm(1);
