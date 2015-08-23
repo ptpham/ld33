@@ -238,9 +238,9 @@ function createObject(objectToRender) {
   var uniforms = {
     u_lightWorldPos: lightWorldPosition,
     u_lightColor: lightColor,
-    u_diffuseMult: chroma.hsv((baseHue + rand(0, 60)) % 360, 0.4, 0.8).gl(),
+    u_diffuseMult: [1, 1, 1, 1],
     u_specular: [1, 1, 1, 1],
-    u_emissive: [0, 0, 0, 0],
+    u_emissive: [0.15, 0.1, 0.2, 0],
     u_shininess: 50,
     u_specularFactor: 1,
     u_diffuse: textures[objectToRender.name] || textures["default"],
