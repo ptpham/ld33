@@ -52,7 +52,7 @@ var obstacle = {
   radius: obstacleSize / 2,
   rotationSpeed: 1,
   scale: [1, 1, 1],
-  timeTranslation: [0, 0.001, 0],
+  timeTranslation: [0, -0.001, 0],
   translation: [towerWidth, 0, 0],
   name: "obstacle",
   doCollide: function() {
