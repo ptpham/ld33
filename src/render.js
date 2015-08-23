@@ -11,10 +11,18 @@ var wormHeight = 1;
 var lose = false;
 var score = 0;
 
+var globalRotation = 1;
+
+var skyVertices = twgl.primitives.createCylinderVertices(50, 70, 12, 1, false, false);
+_.times(skyVertices.normal.length/3, function(i) {
+  skyVertices.normal[3*i + 2] *= -1;
+  skyVertices.normal[3*i] *= -1;
+});
+
 var skyCylinder = {
-  bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, 50, 70, 12, 1, false, false),
+  bufferInfo: twgl.createBufferInfoFromArrays(gl, skyVertices),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
-  rotationSpeed: 1,
+  rotationSpeed: globalRotation,
   name: "sky"
 };
 
@@ -29,7 +37,7 @@ function createFood(timeCreated) {
     bufferInfo: twgl.primitives.createPlaneBufferInfo(gl, 1, 1, 100, 100, m4.rotationX(Math.PI / 2)),
     programInfo: twgl.createProgramInfo(gl, ["quad-vs", "tower-fs"]),
     center: [0, 0, -towerWidth],
-    rotationSpeed: 1,
+    rotationSpeed: globalRotation,
     radius: 0.5,
     translation: [0, 5, 0],
     timeCreated: timeCreated,
@@ -51,7 +59,7 @@ var obstacle = {
   bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
   radius: obstacleSize / 2,
-  rotationSpeed: 1,
+  rotationSpeed: globalRotation,
   scale: [1, 1, 1],
   timeTranslation: [0, -0.001, 0],
   translation: [towerWidth, 0, 0],
@@ -65,7 +73,7 @@ var obstacle = {
 var tower = {
   bufferInfo: twgl.primitives.createCylinderBufferInfo(gl, towerWidth, towerHeight, 100, 100),
   programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
-  rotationSpeed: 1,
+  rotationSpeed: globalRotation,
   name: "tower"
 };
 
@@ -201,7 +209,7 @@ function rand(min, max) {
 }
 
 // Shared values
-var lightWorldPosition = [1, 8, -10];
+var lightWorldPosition = [8, 8, 8];
 var lightColor = [1, 1, 1, 1];
 var camera = m4.identity();
 var view = m4.identity();
@@ -237,7 +245,6 @@ for (var ii = 0; ii < numObjects; ++ii) {
  
 function createObject(objectToRender) {
   var uniforms = {
-    u_lightWorldPos: lightWorldPosition,
     u_lightColor: lightColor,
     u_diffuseMult: [1, 1, 1, 1],
     u_specular: [1, 1, 1, 1],
@@ -345,6 +352,9 @@ function render(time) {
     gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, wormVertices.spine, gl.STATIC_DRAW);
 
+    var worldRotation = m4.rotateY(m4.identity(), time * globalRotation);
+    var transformedLight = m4.transformPoint(worldRotation, lightWorldPosition);
+
     objects.forEach(function(obj) {
       if (obj.name === "worm") {
         obj.center = getWormHeadPosition();
@@ -368,6 +378,7 @@ function render(time) {
       obj.worldCenter = m4.transformPoint(uni.u_world, obj.center);
       m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
       m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
+      uni.u_lightWorldPos = transformedLight;
     });
 
     objects.forEach(function(thisObject) {
