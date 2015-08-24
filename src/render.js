@@ -127,13 +127,13 @@ var wormRadialSegments = 12;
 var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormRadialSegments, 2000);
 
 // wormSpine entries are radius, height, and tilt
-var wormSpine = [[5, 0, 0], [5, 0, 0], [5,0,0]];
-var wormRadiusMin = 5, wormRadiusMax = 7;
+var wormRadiusMin = 5.5, wormRadiusMax = 6.5;
+var wormSpine = [[wormRadiusMin, 0, 0], [wormRadiusMin, 0, 0], [wormRadiusMin,0,0]];
 
 var numWormVertices = wormVertices.position.length/3;
 wormVertices.spine = new Float32Array(3*numWormVertices);
-var segmentLength = Math.PI/4, verticesPerSegment = 8*2*(wormRadialSegments + 1), wormExtension = 0;
-var wormShift = 0, wormOffset = 5/4*Math.PI, wormLength = segmentLength*(wormSpine.length - 2);
+var segmentLength = Math.PI/8, verticesPerSegment = 8*2*(wormRadialSegments + 1), wormExtension = 0;
+var wormShift = 0, wormOffset = 5/4*Math.PI + segmentLength, wormLength = segmentLength*(wormSpine.length - 2);
 var wormHealth = 100, wormDamaged = 0, maxSegments = numWormVertices/verticesPerSegment;
 var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
 
@@ -434,11 +434,10 @@ function render(time) {
         objects.forEach(thisObject.collide);
       }
     });
+    twgl.drawObjectList(gl, drawObjects);
   }
 
-  twgl.drawObjectList(gl, drawObjects);
   filterFallen();
-
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
