@@ -73,7 +73,7 @@ function startGame() {
     food.doCollide = (function() {
       score++;
       scoreDiv.innerHTML = score;
-      obstacleProbability += 0.01;
+      obstacleProbability += (1.0 - obstacleProbability)/90;
       addWormSegment();
       removeItem(this);
     }).bind(food);
