@@ -3,7 +3,7 @@ var v3 = twgl.v3;
 var m4 = twgl.m4;
 var gl = twgl.getWebGLContext(document.getElementById("c"));
 
-var gridSize = 72;
+var gridSize = 36;
 var obstacleSize = 1;
 var towerWidth = 5;
 var towerHeight = 12;
@@ -28,31 +28,43 @@ var skyCylinder = {
 };
 
 // one food for now
-var numFoodToCreate = 0;
-var numObstaclesToCreate = 0;
-var foodInterval = 10;
-var currentFoodInterval = 0;
-var obstacleInterval = 1000;
-var currentObstacleInterval = 0;
-var globalInterval = 0;
 var minHeight = -towerHeight/3;
 var maxHeight = towerHeight/3 + 1;
+var obstacleProbability = 0.1;
+var foodProbability = 0.1;
 
-function createFood(timeCreated) {
-  if (globalInterval > 0) {
-    return false;
+function makeDisk(timeCreated) {
+  var numFood = 0, numObstacles = 0;
+  while (rand(0, 1) < obstacleProbability) numObstacles++;
+  while (rand(0, 1) < foodProbability) numFood++;
+  var positions = _.sample(_.times(gridSize, _.identity), numObstacles + numFood);
+  var rotations = _.map(positions, function(p) { return 2*Math.PI*p/gridSize; });
+  for (var i = 0; i < positions.length; i++) {
+    if (i < numObstacles) createObstacle(timeCreated, rotations[i]);
+    else createFood(timeCreated, rotations[i]);
   }
+}
 
-  var rotation = 2*Math.PI * Math.floor(rand(0,gridSize))/gridSize;
+var foodProgram = twgl.createProgramInfo(gl, ["food-vs", "food-fs"]);
+var foodBufferInfo = twgl.primitives.createSphereBufferInfo(gl, obstacleSize/2, 10, 10);
+
+var itemList = [];
+function removeItem(target) {
+  itemList.splice(itemList.indexOf(target), 1);
+  objects.splice(objects.indexOf(target.renderTarget), 1);
+  drawObjects.splice(drawObjects.indexOf(target.drawObject), 1);
+}
+
+function createFood(timeCreated, rotation) {
   var food = {
-    bufferInfo: twgl.primitives.createSphereBufferInfo(gl, obstacleSize/2, 10, 10),
-    programInfo: twgl.createProgramInfo(gl, ["food-vs", "food-fs"]),
+    bufferInfo: foodBufferInfo,
+    programInfo: foodProgram,
     rotation: rotation,
     rotationSpeed: globalRotation,
     radius: 0.5,
     translation: [towerWidth, towerHeight/2, 0],
     timeCreated: timeCreated,
-    timeTranslation: [0, -0.005, 0],
+    timeTranslation: [0, -1, 0],
     u_diffuseMult: [ 1, 0.2, 0, 0.9 ],
     u_emissive: [ 1, 0, 0, 1],
     name: "princess"
@@ -60,31 +72,26 @@ function createFood(timeCreated) {
   food.doCollide = (function() {
     score++;
     addWormSegment();
-    objects.splice(objects.indexOf(this.renderTarget), 1);
-    drawObjects.splice(drawObjects.indexOf(this.drawObject), 1);
-    obstacleInterval--;
-    obstacleInterval = Math.max(obstacleInterval, 100);
-    numFoodToCreate++;
+    removeItem(this);
   }).bind(food);
   createObject(food);
-  globalInterval += 100;
+  itemList.push(food);
   return food;
 };
 
-function createObstacle(timeCreated, force) {
-  if (!force && globalInterval > 0) {
-    return false;
-  }
+var obstacleBufferInfo = twgl.primitives.createCubeBufferInfo(gl, obstacleSize);
+var obstacleProgramInfo = twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]);
 
+function createObstacle(timeCreated, rotation) {
   var rotation = 2*Math.PI * Math.floor(rand(0,gridSize)) / gridSize;
   var obstacle = {
-    bufferInfo: twgl.primitives.createCubeBufferInfo(gl, obstacleSize),
-    programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+    bufferInfo: obstacleBufferInfo,
+    programInfo: obstacleProgramInfo, 
     radius: obstacleSize / 2,
     rotation: rotation,
     rotationSpeed: globalRotation,
     scale: [1, 1, 1],
-    timeTranslation: [0, -0.005, 0],
+    timeTranslation: [0, -1, 0],
     timeCreated: timeCreated,
     translation: [towerWidth, towerHeight/2, 0],
     name: "obstacle",
@@ -93,14 +100,21 @@ function createObstacle(timeCreated, force) {
     }
   };
   createObject(obstacle);
-  globalInterval += 100;
+  itemList.push(obstacle);
   return obstacle;
 }
 
-var towerVertices = twgl.primitives.createCylinderVertices(towerWidth, towerHeight, 100, 10);
+var towerVertices = twgl.primitives.createCylinderVertices(towerWidth, towerHeight, 24, 10);
 _.times(towerVertices.texcoord.length, function(i) {
   towerVertices.texcoord[i] *= 4;
 });
+
+function filterFallen() {
+  var toRemove = _.filter(itemList, function(item) {
+    return item.renderTarget.worldCenter[1] < minHeight - 2;
+  });
+  _.each(toRemove, function(item) { removeItem(item); });
+}
 
 var tower = {
   bufferInfo: twgl.createBufferInfoFromArrays(gl, towerVertices),
@@ -110,7 +124,7 @@ var tower = {
 };
 
 var wormRadialSegments = 12;
-var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormRadialSegments, 200);
+var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormRadialSegments, 2000);
 
 // wormSpine entries are radius, height, and tilt
 var wormSpine = [[5, 0, 0], [5, 0, 0], [5,0,0]];
@@ -273,8 +287,6 @@ var baseHue = rand(0, 360);
 for (var ii = 0; ii < numObjects; ++ii) {
   createObject(objectsToRender[ii]);
 }
-createFood(0);
-createObstacle(0, true);
  
 function createObject(objectToRender) {
   var uniforms = {
@@ -344,29 +356,18 @@ function colorWormDamage(time) {
 }
 
 var lastTime = null;
-var dt = 0;
+var lastSlice = null;
 function render(time) {
-  if (globalInterval > 0) {
-    globalInterval--;
+  if (lastSlice == null || time - lastSlice > 1000) {
+    lastSlice = time;
+    makeDisk(time);
   }
-  if (currentObstacleInterval > obstacleInterval) {
-    currentObstacleInterval = 0;
-    numObstaclesToCreate++;
-  } else {
-    currentObstacleInterval++;
-  }
-  if (numObstaclesToCreate > 0 && createObstacle(dt)) {
-    numObstaclesToCreate--;
-  } else if (numFoodToCreate > 0 && createFood(dt)) {
-    numFoodToCreate--;
-  }
+
   if (!lose) {
     if (lastTime == null) lastTime = time;
     var delta = time - lastTime;
     lastTime = time;
 
-    time *= 0.001;
-    dt++;
     twgl.resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -384,7 +385,7 @@ function render(time) {
     m4.inverse(camera, view);
     m4.multiply(view, projection, viewProjection);
 
-    advanceWormSpine(delta/2);
+    advanceWormSpine(delta);
     if (keysDown[87]) nudgeWormSpine(0.1);
     else if (keysDown[83])  nudgeWormSpine(-0.1);
     applyWormSpine();
@@ -397,10 +398,11 @@ function render(time) {
     gl.bindBuffer(gl.ARRAY_BUFFER, wormSpineBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, wormVertices.spine, gl.STATIC_DRAW);
 
-    var worldRotation = m4.rotateY(m4.identity(), time * globalRotation);
+    var speedFactor = 0.001;
+    var worldRotation = m4.rotateY(m4.identity(), speedFactor * time * globalRotation);
     var transformedLight = m4.transformPoint(worldRotation, lightWorldPosition);
 
-    objects.forEach(function(obj) {
+    objects.forEach(function(obj, i) {
       if (obj.name === "worm") {
         obj.center = getWormHeadPosition();
       }
@@ -408,16 +410,16 @@ function render(time) {
       var uni = obj.uniforms;
       var world = uni.u_world;
       var timeTranslation = obj.timeTranslation.map(function(coord) { 
-          var actualDt = dt - obj.timeCreated;
-          return coord * actualDt;
+          var actualDt = time - obj.timeCreated;
+          return speedFactor * coord * actualDt;
       });
       if (obj.name === "tower") {
-        uni.u_time = time;
+        uni.u_time = 35*speedFactor*time;
       }
       uni.u_mousePos = lastMouse;
       m4.identity(world);
       m4.rotateY(world, obj.rotation, world);
-      m4.rotateY(world, time * obj.ySpeed, world);
+      m4.rotateY(world, speedFactor * time * obj.ySpeed, world);
       m4.scale(world, obj.scale, world);
       m4.translate(world, obj.translation, world);
       m4.translate(world, timeTranslation, world);
@@ -435,6 +437,7 @@ function render(time) {
   }
 
   twgl.drawObjectList(gl, drawObjects);
+  filterFallen();
 
   requestAnimationFrame(render);
 }
