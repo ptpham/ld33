@@ -417,8 +417,8 @@ function startGame() {
       m4.multiply(view, projection, viewProjection);
   
       advanceWormSpine(delta);
-      if (keysDown[87]) nudgeWormSpine(0.1);
-      else if (keysDown[83])  nudgeWormSpine(-0.1);
+      if (keysDown[87]) nudgeWormSpine(0.01*delta);
+      else if (keysDown[83])  nudgeWormSpine(-0.01*delta);
       applyWormSpine();
       checkSelfIntersection();
       colorWormDamage(time);
