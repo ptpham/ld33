@@ -20,18 +20,27 @@
       }
       health-bar {
         position: absolute; border-radius: 10px; overflow: hidden;
-        border: 2px solid white; height: 20px; width: calc(100% - 40px);
+        border: 2px solid white; height: 20px; width: calc(100% - 110px);
+        margin-top: 10px;
       }
       health-filled {
         display: block;
         height: 100%; width: 100%; opacity: 0.3;
         background: green;
       }
+      #scoreDiv {
+        color: white;
+        text-align: end;
+        font-size: 50px;
+        width: 70px;
+        padding-right: 20px;
+      }
     </style>
   </head>
   <body>
     <canvas id="c"></canvas>
     <overhead-bar>
+      <div id="scoreDiv">0</div>
       <health-bar>
         <health-filled id="healthIndicator"></health-filled>
       </health-bar>

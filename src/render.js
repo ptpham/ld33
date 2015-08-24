@@ -31,7 +31,7 @@ var skyCylinder = {
 var minHeight = -towerHeight/3;
 var maxHeight = towerHeight/3 + 1;
 var obstacleProbability = 0.1;
-var foodProbability = 0.1;
+var foodProbability = 0.15;
 
 function makeDisk(timeCreated) {
   var numFood = 0, numObstacles = 0;
@@ -71,6 +71,8 @@ function createFood(timeCreated, rotation) {
   };
   food.doCollide = (function() {
     score++;
+    scoreDiv.innerHTML = score;
+    obstacleProbability += 0.01;
     addWormSegment();
     removeItem(this);
   }).bind(food);
