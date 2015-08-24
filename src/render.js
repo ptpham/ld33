@@ -128,6 +128,12 @@ var tower = {
 var wormRadialSegments = 12;
 var wormVertices = twgl.primitives.createCylinderVertices(wormWidth, wormHeight, wormRadialSegments, 2000);
 
+var wormHead = new OBJ.Mesh(headObj.innerHTML);
+wormHead.position = wormHead.vertices;
+wormHead.normal = wormHead.vertexNormals;
+delete wormHead.textures;
+var wormHeadBufferInfo = twgl.createBufferInfoFromArrays(gl, wormHead);
+
 // wormSpine entries are radius, height, and tilt
 var wormRadiusMin = 5.5, wormRadiusMax = 6.5;
 var wormSpine = [[wormRadiusMin, 0, 0], [wormRadiusMin, 0, 0], [wormRadiusMin,0,0]];
@@ -231,6 +237,15 @@ function applyWormSpine() {
     wormVertices.spine[3*i + 1] = alpha*upper[1] + (1.0 - alpha)*lower[1] - wormFudge*(wormLength - fudgeScaled*segmentLength);
     wormVertices.spine[3*i + 2] = Math.min(segmentLength*(i_use)/verticesPerSegment, wormLength) + wormOffset;
   });
+
+  if (headThingy) {
+    var head = getWormHeadPosition();
+    var translation = headThingy.translation;
+    for (var i = 0; i < 3; i++) translation[i] = head[i];
+    translation[0] -= 0.4;
+    translation[1] -= 0.2;
+    
+  }
 }
 
 applyWormSpine(0);
@@ -255,7 +270,16 @@ var worm = {
   name: "worm"
 };
 
-var objectsToRender = [ skyCylinder, tower, worm ];
+var headThingy = {
+  bufferInfo: wormHeadBufferInfo, 
+  programInfo: twgl.createProgramInfo(gl, ["tower-vs", "tower-fs"]),
+  translation: [0, 0, 0],
+  scale: [ 0.5, 0.5, 0.5 ],
+  u_diffuseMult: [0.9, 0.8, 0.0, 1],
+  name: "wormHead"
+};
+
+var objectsToRender = [ skyCylinder, tower, worm, headThingy ];
 
 function rand(min, max) {
   return min + Math.random() * (max - min);
@@ -298,10 +322,10 @@ function createObject(objectToRender) {
   var uniforms = {
     u_lightColor: lightColor,
     u_diffuseMult: objectToRender.u_diffuseMult || [1, 1, 1, 1],
-    u_specular: [1, 1, 1, 1],
+    u_specular: objectToRender.u_specular ||[1, 1, 1, 1],
     u_emissive: objectToRender.u_emissive || [0.15, 0.1, 0.2, 0],
     u_shininess: 50,
-    u_specularFactor: 0,
+    u_specularFactor: objectToRender.u_specularFactor || 0,
     u_diffuse: textures[objectToRender.name] || textures["default"],
     u_viewInverse: camera,
     u_world: m4.identity(),
@@ -426,9 +450,9 @@ function render(time) {
       m4.identity(world);
       m4.rotateY(world, obj.rotation, world);
       m4.rotateY(world, 2*speedFactor * time * obj.ySpeed, world);
-      m4.scale(world, obj.scale, world);
       m4.translate(world, obj.translation, world);
       m4.translate(world, timeTranslation, world);
+      m4.scale(world, obj.scale, world);
       obj.worldCenter = m4.transformPoint(uni.u_world, obj.center);
       m4.transpose(m4.inverse(world, uni.u_worldInverseTranspose), uni.u_worldInverseTranspose);
       m4.multiply(uni.u_world, viewProjection, uni.u_worldViewProjection);
@@ -441,9 +465,9 @@ function render(time) {
       }
     });
     twgl.drawObjectList(gl, drawObjects);
+    filterFallen();
   }
 
-  filterFallen();
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
