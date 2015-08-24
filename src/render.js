@@ -137,7 +137,7 @@ wormVertices.spine = new Float32Array(3*numWormVertices);
 var segmentLength = Math.PI/8, verticesPerSegment = 8*2*(wormRadialSegments + 1), wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI + segmentLength, wormLength = segmentLength*(wormSpine.length - 2);
 var wormHealth = 100, wormDamaged = 0, maxSegments = numWormVertices/verticesPerSegment;
-var wormFudge = 0.4;
+var wormFudge = 0.5;
 var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
 
 function damageWorm(amount) {
