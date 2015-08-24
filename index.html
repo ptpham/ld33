@@ -253,13 +253,19 @@
     document.addEventListener('keyup', function(e) {
       delete keysDown[e.keyCode];
     });
+    function playAudio() {
+      var audio = new Audio("ld33.wav");
+      audio.addEventListener('ended', function() {
+        playAudio();
+      }, false);
+      audio.play();
+    }
+    playAudio();
   </script>
   <script src="lodash.min.js"></script>
   <script src="twgl-full.js"></script>
   <script src="chroma.min.js"></script>
   <script src="src/render.js"></script>
-
-
 </html>
 
 
