@@ -164,7 +164,7 @@ function startGame() {
   }
   
   function detectSelfIntersection(radiusQuery) {
-    var lookAheadRadians = segmentLength;
+    var lookAheadRadians = Math.PI/4;
     var lookAhead = verticesPerSegment*lookAheadRadians;
     var i = Math.floor(verticesPerSegment*wormLength/segmentLength);
     var height = wormVertices.spine[3*i + 1];
