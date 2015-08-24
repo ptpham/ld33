@@ -137,6 +137,7 @@ wormVertices.spine = new Float32Array(3*numWormVertices);
 var segmentLength = Math.PI/8, verticesPerSegment = 8*2*(wormRadialSegments + 1), wormExtension = 0;
 var wormShift = 0, wormOffset = 5/4*Math.PI + segmentLength, wormLength = segmentLength*(wormSpine.length - 2);
 var wormHealth = 100, wormDamaged = 0, maxSegments = numWormVertices/verticesPerSegment;
+var wormFudge = 0.4;
 var damageColors = [[0.3, 0, 0, 0], [0.3, 0.3, 0.3, 0]];
 
 function damageWorm(amount) {
@@ -189,6 +190,8 @@ function advanceWormSpine(delta) {
     wormSpine.splice(0, 1);
     var newSegment = _.cloneDeep(_.last(wormSpine));
     wormSpine.push(newSegment);
+    _.each(wormSpine, function(s) {
+    });
     wormShift -= threshold;
   }
 }
@@ -217,6 +220,7 @@ function applyWormSpine() {
     var i_use = Math.min(Math.max(i, endVerts), numWormVertices - endVerts);
     var numSegments = wormSpine.length;
     var scaled = Math.min((i_use + wormShift)/verticesPerSegment, wormLength/segmentLength + wormShift/verticesPerSegment);
+    var fudgeScaled = Math.min(i_use/verticesPerSegment, wormLength/segmentLength + wormShift/verticesPerSegment);
     var index = Math.floor(scaled);
     var alpha = Math.min(scaled - index, 1);
 
@@ -224,7 +228,7 @@ function applyWormSpine() {
     var upper = wormSpine[Math.min(index + 1, numSegments - 1)];
 
     wormVertices.spine[3*i] = alpha*upper[0] + (1.0 - alpha)*lower[0];
-    wormVertices.spine[3*i + 1] = alpha*upper[1] + (1.0 - alpha)*lower[1];
+    wormVertices.spine[3*i + 1] = alpha*upper[1] + (1.0 - alpha)*lower[1] - wormFudge*(wormLength - fudgeScaled*segmentLength);
     wormVertices.spine[3*i + 2] = Math.min(segmentLength*(i_use)/verticesPerSegment, wormLength) + wormOffset;
   });
 }
@@ -421,7 +425,7 @@ function render(time) {
       uni.u_mousePos = lastMouse;
       m4.identity(world);
       m4.rotateY(world, obj.rotation, world);
-      m4.rotateY(world, speedFactor * time * obj.ySpeed, world);
+      m4.rotateY(world, 2*speedFactor * time * obj.ySpeed, world);
       m4.scale(world, obj.scale, world);
       m4.translate(world, obj.translation, world);
       m4.translate(world, timeTranslation, world);
