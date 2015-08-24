@@ -32,7 +32,7 @@ function startGame() {
   var minHeight = -towerHeight/3;
   var maxHeight = towerHeight/3 + 1;
   var obstacleProbability = 0.1;
-  var foodProbability = 0.15;
+  var foodProbability = 0.2;
   
   function makeDisk(timeCreated) {
     var numFood = 0, numObstacles = 0;
